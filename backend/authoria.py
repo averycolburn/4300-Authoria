@@ -1,9 +1,7 @@
 #from Cocktail lab previous repo https://github.com/tl676/Cocktail-Lab/blob/master/backend/cocktailLab.py
 from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
 import csv
-import math
-
+import numpy as np
 
 class Authoria:
     def __init__(self):
@@ -25,11 +23,11 @@ class Authoria:
             enumerate(self.author_to_genre.keys())
         }
 
-      """Dictionary of {index: cocktail name}"""
+      """Dictionary of {index: author name}"""
       self.author_index_to_name = {
             v: k for k, v in self.author_name_to_index.items()}
 
-      """List of cocktail names"""
+      """List of authors"""
       self.author_names = self.authors_to_genre.keys()
 
       """The sklearn TfidfVectorizer object"""
@@ -45,10 +43,6 @@ class Authoria:
       """Dictionary of {index: token}"""
       self.index_to_vocab = {i: v for i, v in enumerate(
             self.descriptions_tfidf_vectorizer.get_feature_names())}
-
-      # self.rocchio_alpha = 1.0
-
-      # self.rocchio_beta = 1.0
 
 
     def read_file_genre(self, filepath):
@@ -161,8 +155,10 @@ class Authoria:
         """
         num = np.dot(vec1, vec2)
         den = (np.linalg.norm(vec1)) * (np.linalg.norm(vec2))
-        # TODO possibly throwing errors due to divide by 0
-        return num / den
+        if den == 0:
+          return 0
+        else:
+          num / den
 
     def cos_rank(self, query, doc_by_vocab):
         """ Returns a tuple list that represents the doc indexes and their
@@ -187,54 +183,36 @@ class Authoria:
             doc = doc_by_vocab[d]
             sim = self.cos_sim(query, doc)
             # adjust by popularity
-            sim += self.cocktail_names_to_popularity[self.cocktail_index_to_name[d]] * 0.02
+            sim += self.authors_to_ratings[self.author_index_to_name[d]] * 0.02
             retval.append([d, sim])
         sorted_list = list(sorted(retval, reverse=True, key=lambda x: x[1]))
         return sorted_list
 
-    # def boolean_search_and(self, query, doc_by_vocab):
-    #     """ Returns a list of doc indexes that contain all the query words
-
-    #     Params:
-    #     query: ?? by 1 string np array
-    #         The desired ingredients, as computed by make_query
-    #     doc_by_vocab: ?? by ?? np array
-    #         The doc by vocab matrix as computed by make_matrix
-
-    #     Returns:
-    #         An int list where each element is the doc index of a doc containing 
-    #         all the query words.
-    #     """
-    #     retval = []
-    #     target = np.sum(query)
-    #     for idx, doc in enumerate(doc_by_vocab):
-    #         combine = np.logical_and(query, doc)
-    #         if np.sum(combine) == target:
-    #             retval.append(idx)
-    #     return retval
-
-    # def boolean_search_not(self, query, doc_by_vocab):
-    #     """ Returns a list of doc indexes that contain none of the query words
-
-    #     Params:
-    #     query: ?? by 1 string np array
-    #         The desired ingredients, as computed by make_query
-    #     doc_by_vocab: ?? by ?? np array
-    #         The doc by vocab matrix as computed by make_matrix
-
-    #     Returns:
-    #         An int list where each element is the doc index of a doc containing 
-    #         none of the query words.
-    #     """
-    #     retval = []
-    #     for idx, doc in enumerate(doc_by_vocab):
-    #         combine = np.logical_and(query, doc)
-    #         if np.sum(combine) == 0:
-    #             retval.append(idx)
-    #     return retval
-
     def comma_space_split(self, str):
         return [i for i in ",".join(str.split(" ")).split(",") if i]
+    
+    def make_query(self, tokens, vectorizer, doc_by_vocab):
+        """ Returns a query vector made from tokens that matches the term matrix 
+            doc_by_vocab.
+
+        Parameters:
+        tokens: str list or str set
+            The tokens that make up a query. 
+        vectorizer: tfidf vectorizer object
+            The doc by vocab matrix as computed by make_matrix
+        doc_by_vocab: tfidf or boolean matrix
+        """
+        vocab_to_index = {v: i for i, v in enumerate(
+            vectorizer.get_feature_names())}
+        retval = np.zeros_like(doc_by_vocab[0])
+        for t in tokens:
+            try:
+                ind = vocab_to_index[t]
+                retval[ind] = 1
+            except:
+                # token not in matrix
+                continue
+        return retval
 
     def query(self, text_description):
         # initialize variables
@@ -253,10 +231,10 @@ class Authoria:
             pref_vec = self.make_query(
                 [word.strip().lower()
                  for word in self.comma_space_split(text_description)],
-                self.ingreds_tfidf_vectorizer,
+                self.descriptions_tfidf_vectorizer,
                 matrix)
         # cosine sim:
-        cos_rank = self.cos_rank(pref_vec)
+        cos_rank = self.cos_rank(pref_vec, matrix)
         rank_list = [{
             'author': self.author_index_to_name[i[0]],
             'description': self.authors_to_description[self.author_index_to_name[i[0]]],
@@ -264,20 +242,13 @@ class Authoria:
             'rating': self.authors_to_ratings[self.author_index_to_name[i[0]]],
         } for i in cos_rank]
 
-        # # boolean
-        # and_list = self.boolean_search_and(flavor_include_vec, matrix)
-        # not_list = self.boolean_search_not(flavor_exclude_vec, matrix)
-        # idx_list = list(set(and_list).intersection(set(not_list)))
-
         matrix = matrix[idx_list]
         rank_list = [
             i for i in rank_list
-            if self.cocktail_name_to_index[i['author']] in idx_list]
+            if self.author_name_to_index[i['author']] in idx_list]
 
         return rank_list
 
-
-# here for testing purposes (run $ python cocktailLab.py)
 if __name__ == "__main__":
     authoria = Authoria()
-    print(authoria.author_names_to_popularity)
+    print(authoria.authors_to_ratings)
