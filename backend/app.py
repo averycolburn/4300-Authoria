@@ -47,19 +47,19 @@ def episodes_search():
     text = request.args.get("text-description")
     # return sql_search(text)
 
-    max_pop = 0
+    max_pop = -1
     max_i = 0
     res = authoria.query(text)
     for i in range(len(res)):
-        if res[i]['popularity'] > max_pop:
-            max_pop = res[i]['popularity']
+        if res[i]['rating'] > max_pop:
+            max_pop = res[i]['rating']
             max_i = i
 
     for i in range(len(res)):
         if i == max_i:
-            res[i] = dict(res[i], **{'most_popular':True})
+            res[i] = dict(res[i])
         else:
-            res[i] = dict(res[i], **{'most_popular':False})
+            res[i] = dict(res[i])
 
     return json.dumps(res)
 
