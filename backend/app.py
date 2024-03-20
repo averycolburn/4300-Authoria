@@ -42,14 +42,14 @@ authoria = Authoria()
 def home():
     return render_template('base.html',title="sample html")
 
-@app.route("/episodes")
+@app.route("/query")
 def episodes_search():
-    text = request.args.get("title")
+    text = request.args.get("text-description")
     # return sql_search(text)
 
     max_pop = 0
     max_i = 0
-    res = authoria.query(text)[:10]
+    res = authoria.query(text)
     for i in range(len(res)):
         if res[i]['popularity'] > max_pop:
             max_pop = res[i]['popularity']
