@@ -325,4 +325,4 @@ class Authoria:
     return rank_list
   
 if __name__ == "__main__":
-    authoria = Authoria_new()
+    authoria = Authoria()
