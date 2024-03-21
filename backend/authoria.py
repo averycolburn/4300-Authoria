@@ -9,7 +9,7 @@ class Authoria:
       self.authors_to_genre = self.read_file_genre('data/seven_k_books.csv')
 
       """Dictionary of {authors: descriptions}"""
-      self.authors_to_description = self.read_file_description('data/seven_k_books.csv')
+      self.authors_to_descriptions = self.read_file_description('data/seven_k_books.csv')
 
       """Dictionary of {authors: average rating}"""
       self.authors_to_ratings = self.read_file_popularity('data/seven_k_books.csv')
@@ -20,22 +20,22 @@ class Authoria:
       """Dictionary of {author: index}"""
       self.author_name_to_index = {
             name: index for index, name in
-            enumerate(self.author_to_genre.keys())
+            enumerate(self.authors_to_genre.keys())
         }
 
       """Dictionary of {index: author name}"""
       self.author_index_to_name = {
             v: k for k, v in self.author_name_to_index.items()}
-
+      print(self.author_index_to_name)
       """List of authors"""
       self.author_names = self.authors_to_genre.keys()
-
+      print(self.author_names)
       """The sklearn TfidfVectorizer object"""
       self.descriptions_tfidf_vectorizer = self.make_vectorizer(binary=True)
-
+      print(self.descriptors_tfidf_vectorizer)
       self.descriptions = [self.authors_to_descriptions[author] for author in
                         self.authors_to_descriptions]
-
+    
       """The term-document matrix"""
       self.description_doc_by_vocab = self.descriptions_tfidf_vectorizer.fit_transform(
             self.descriptions).toarray()
@@ -55,7 +55,7 @@ class Authoria:
             csv_reader = csv.DictReader(file)
             for row in csv_reader:
                 authors = row['authors'].split(', ')
-                genre = row['genre']
+                genre = row['categories']
                 for author in authors:
                     if author not in author_genre_dict:
                         #genre dictionary we use set so genres don't get repeated
@@ -91,7 +91,10 @@ class Authoria:
             csv_reader = csv.DictReader(file)
             for row in csv_reader:
                 authors = row['authors'].split(', ')
-                popularity = row['average_rating']
+                avg_rating = row['average_rating']
+                if avg_rating != '':
+                    popularity = float(row['average_rating'])
+                else: popularity = 0
                 for author in authors:
                     if author not in author_popularity_dict:
                         author_popularity_dict[author] = []
@@ -100,7 +103,7 @@ class Authoria:
               if len(value) == 0:
                 average_value = 0
               else:
-                avergage_value = sum(value)/len(value)
+                average_value = sum(value)/len(value)
               author_avg_popularity_dict[key] = average_value
        return author_avg_popularity_dict
     

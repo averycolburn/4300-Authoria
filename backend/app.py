@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, request
 from flask_cors import CORS
 from helpers.MySQLDatabaseHandler import MySQLDatabaseHandler
-from authoria import Authoria
+import authoria_new
 
 # ROOT_PATH for linking with all your files. 
 # Feel free to use a config.py or settings.py with a global export variable
@@ -26,7 +26,6 @@ os.environ['ROOT_PATH'] = os.path.abspath(os.path.join("..",os.curdir))
 app = Flask(__name__)
 CORS(app)
 
-authoria = Authoria()
 
 #again going off of cocktail lab's app.py implementation
 # # Sample search, the LIKE operator in this case is hard-coded, 
@@ -49,7 +48,7 @@ def episodes_search():
 
     max_pop = -1
     max_i = 0
-    res = authoria.query(text)
+    res = authoria_new.query(text)
     for i in range(len(res)):
         if res[i]['rating'] > max_pop:
             max_pop = res[i]['rating']
