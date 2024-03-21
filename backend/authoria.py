@@ -1,10 +1,11 @@
-#from Cocktail lab previous repo https://github.com/tl676/Cocktail-Lab/blob/master/backend/cocktailLab.py
-from sklearn.feature_extraction.text import TfidfVectorizer
-import csv
 import numpy as np
+import csv 
+from typing import List, Tuple, Dict
+import math
+from nltk.tokenize import TreebankWordTokenizer
 
 class Authoria:
-    def __init__(self):
+  def __init__(self):
       """Dictionary of {author: genres}"""
       self.authors_to_genre = self.read_file_genre('data/seven_k_books.csv')
 
@@ -26,232 +27,302 @@ class Authoria:
       """Dictionary of {index: author name}"""
       self.author_index_to_name = {
             v: k for k, v in self.author_name_to_index.items()}
-      print(self.author_index_to_name)
+
       """List of authors"""
       self.author_names = self.authors_to_genre.keys()
-      print(self.author_names)
-      """The sklearn TfidfVectorizer object"""
-      self.descriptions_tfidf_vectorizer = self.make_vectorizer(binary=True)
-      print(self.descriptors_tfidf_vectorizer)
+
+      """List of descriptions"""
       self.descriptions = [self.authors_to_descriptions[author] for author in
                         self.authors_to_descriptions]
-    
-      """The term-document matrix"""
-      self.description_doc_by_vocab = self.descriptions_tfidf_vectorizer.fit_transform(
-            self.descriptions).toarray()
+      
+  def read_file_genre(self, filepath):
+    """ Returns a dictionary of format {'author' : 'genre1, genre2'}
+          Parameters:
+          filepath: path to file
+          """
+    author_genre_dict = {}
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for row in csv_reader:
+        authors = row['authors'].split(', ')
+        genre = row['categories']
+        for author in authors:
+          if author not in author_genre_dict:
+              #genre dictionary we use set so genres don't get repeated
+              author_genre_dict[author] = set() 
+          author_genre_dict[author].add(genre)
+    return author_genre_dict
 
-      """Dictionary of {index: token}"""
-      self.index_to_vocab = {i: v for i, v in enumerate(
-            self.descriptions_tfidf_vectorizer.get_feature_names())}
+  def read_file_description(self, filepath):
+    """ Returns a dictionary of format {'author' : 'genre1, genre2'}
+          Parameters:
+          filepath: path to file
+          """
+    author_description_dict = {}
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for row in csv_reader:
+        authors = row['authors'].split(', ')
+        description = row['description']
+        for author in authors:
+              if author not in author_description_dict:
+                author_description_dict[author] = []
+              author_description_dict[author].append(description)
+    return author_description_dict
+
+  def read_file_popularity(self, filepath):
+    """ Returns a dictionary of format {'author' : average rating}
+          Parameters:
+          filepath: path to file
+          """
+    author_popularity_dict = {}
+    author_avg_popularity_dict = {}
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for row in csv_reader:
+        authors = row['authors'].split(', ')
+        avg_rating = row['average_rating']
+        if avg_rating != '':
+          popularity = float(row['average_rating'])
+        else: popularity = 0
+        for author in authors:
+          if author not in author_popularity_dict:
+            author_popularity_dict[author] = []
+          author_popularity_dict[author].append(popularity)
+          for key, value in author_popularity_dict.items():
+            if len(value) == 0:
+              average_value = 0
+            else:
+              average_value = sum(value)/len(value)
+            author_avg_popularity_dict[key] = average_value
+    return author_avg_popularity_dict
+
+  def build_inverted_index(self, msgs: List[dict]) -> dict:
+      """Builds an inverted index from the messages.
+
+      Arguments
+      =========
+
+      msgs: list of dicts.
+          Each message in this list already has a 'toks'
+          field that contains the tokenized message.
+
+      Returns
+      =======
+
+      inverted_index: dict
+          For each term, the index contains
+          a sorted list of tuples (doc_id, count_of_term_in_doc)
+          such that tuples with smaller doc_ids appear first:
+          inverted_index[term] = [(d1, tf1), (d2, tf2), ...]
+
+      Example
+      =======
+
+      >> test_idx = build_inverted_index([
+      ...    {'toks': ['to', 'be', 'or', 'not', 'to', 'be']},
+      ...    {'toks': ['do', 'be', 'do', 'be', 'do']}])
+
+      >> test_idx['be']
+      [(0, 2), (1, 2)]
+
+      >> test_idx['not']
+      [(0, 1)]
+
+      """
+      inverted_dict = dict()
+      msg_index = 0
+      for msg in msgs:
+        toks = msg["toks"]
+        tok_msg_tracker = dict.fromkeys(toks, 0) #dict to count number of times each tok appears in the message
+        for token in toks:
+          tok_msg_tracker[token] += 1
+          if token not in inverted_dict:
+            inverted_dict[token] = []
+        for token in tok_msg_tracker.keys():
+          inverted_dict[token].append((msg_index, tok_msg_tracker[token]))
+        msg_index += 1
+      return inverted_dict
+
+  def compute_idf(self, inv_idx, n_docs, min_df=10, max_df_ratio=0.95):
+      """Compute term IDF values from the inverted index.
+      Words that are too frequent or too infrequent get pruned.
+
+      Hint: Make sure to use log base 2.
+
+      inv_idx: an inverted index as above
+
+      n_docs: int,
+          The number of documents.
+
+      min_df: int,
+          Minimum number of documents a term must occur in.
+          Less frequent words get ignored.
+          Documents that appear min_df number of times should be included.
+
+      max_df_ratio: float,
+          Maximum ratio of documents a term can occur in.
+          More frequent words get ignored.
+
+      Returns
+      =======
+
+      idf: dict
+          For each term, the dict contains the idf value.
+      """
+      idf_trimmed = dict()
+      for term in inv_idx.keys():
+        # term = term.lower()
+        df_t = len(inv_idx[term])
+        if df_t >= min_df and (df_t/n_docs) <= max_df_ratio:
+          idf_t = math.log2(n_docs/ (1+ df_t) )
+          idf_trimmed[term] = idf_t
+
+      return idf_trimmed
 
 
-    def read_file_genre(self, filepath):
-       """ Returns a dictionary of format {'author' : 'genre1, genre2'}
-        Parameters:
-        filepath: path to file
-        """
-       author_genre_dict = {}
-       with open(filepath, 'r', encoding='utf-8') as file:
-            csv_reader = csv.DictReader(file)
-            for row in csv_reader:
-                authors = row['authors'].split(', ')
-                genre = row['categories']
-                for author in authors:
-                    if author not in author_genre_dict:
-                        #genre dictionary we use set so genres don't get repeated
-                        author_genre_dict[author] = set() 
-                    author_genre_dict[author].add(genre)
-       return author_genre_dict
+  def compute_doc_norms(self, index, idf, n_docs):
+      """Precompute the euclidean norm of each document.
+      index: the inverted index as above
 
-    def read_file_description(self, filepath):
-       """ Returns a dictionary of format {'author' : 'genre1, genre2'}
-        Parameters:
-        filepath: path to file
-        """
-       author_description_dict = {}
-       with open(filepath, 'r', encoding='utf-8') as file:
-          csv_reader = csv.DictReader(file)
-          for row in csv_reader:
-              authors = row['authors'].split(', ')
-              description = row['description']
-              for author in authors:
-                  if author not in author_description_dict:
-                      author_description_dict[author] = []
-                  author_description_dict[author].append(description)
-       return author_description_dict
+      idf: dict,
+          Precomputed idf values for the terms.
 
-    def read_file_popularity(self, filepath):
-       """ Returns a dictionary of format {'author' : average rating}
-        Parameters:
-        filepath: path to file
-        """
-       author_popularity_dict = {}
-       author_avg_popularity_dict = {}
-       with open(filepath, 'r', encoding='utf-8') as file:
-            csv_reader = csv.DictReader(file)
-            for row in csv_reader:
-                authors = row['authors'].split(', ')
-                avg_rating = row['average_rating']
-                if avg_rating != '':
-                    popularity = float(row['average_rating'])
-                else: popularity = 0
-                for author in authors:
-                    if author not in author_popularity_dict:
-                        author_popularity_dict[author] = []
-                    author_popularity_dict[author].append(popularity)
-            for key, value in author_popularity_dict.items():
-              if len(value) == 0:
-                average_value = 0
-              else:
-                average_value = sum(value)/len(value)
-              author_avg_popularity_dict[key] = average_value
-       return author_avg_popularity_dict
-    
-    def make_vectorizer(self, binary=False, max_df=1.0, min_df=1, use_stop_words=True):
-        """ Returns a TfidfVectorizer object with the above preprocessing properties.
+      n_docs: int,
+          The total number of documents.
+      norms: np.array, size: n_docs
+          norms[i] = the norm of document i.
+      """
+      norms = []
+      summ_dict = dict.fromkeys(range(n_docs), 0)
+      for word_i in index.keys():
+        if word_i in idf.keys():
+          for tf_tuple in index[word_i]:
+            doc = tf_tuple[0]
+            tf = tf_tuple[1]
+            summ_dict[doc] += (tf*idf[word_i]) ** 2
 
-        By default this function returns a tf-idf matrix vectorizer. 
-        This can be switched to a binary representation by setting the binary param 
-        to True.
+      for doc in summ_dict.keys():
+        norms.append(math.sqrt(summ_dict[doc]))
 
-        Parameters:
-        binary: bool (Default = False)
-            A flag to switch between tf-idf representation and binary representation
-        max_df: float (Default = 1.0)
-            The maximum document frequency to use for the matrix, as a proportion of 
-            docs.
-        min_df: float or int (Default = 1)
-            The miniumum document frequency to use for the matrix. If [0.0,1.0], 
-            the parameter represents a proportion of documents, otherwise in absolute
-            doc counts. 
-        use_stop_words: bool (Default = True)
-            A flag to let sklearn remove common stop words.
+      return np.array(norms)
 
-        Returns:
-        A #doc x #vocab np array vectorizer
 
-        """
-        if binary:
-            use_idf = False
-            norm = None
-        else:
-            use_idf = True
-            norm = 'l2'
+  def accumulate_dot_scores(self, query_word_counts: dict, index: dict, idf: dict) -> dict:
+      """Perform a term-at-a-time iteration to efficiently compute the numerator term of cosine similarity across multiple documents.
 
-        if use_stop_words:
-            stop_words = 'english'
-        else:
-            stop_words = None
+      Arguments
+      =========
 
-        tf_mat = TfidfVectorizer(max_df=max_df, min_df=min_df,
-                                 stop_words=stop_words, use_idf=use_idf,
-                                 binary=binary, norm=norm,
-                                 #  analyzer='word', token_pattern='[^,]+'
-                                 )
+      query_word_counts: dict,
+          A dictionary containing all words that appear in the query;
+          Each word is mapped to a count of how many times it appears in the query.
+          In other words, query_word_counts[w] = the term frequency of w in the query.
+          You may safely assume all words in the dict have been already lowercased.
 
-        return tf_mat
-    
-    def cos_sim(self, vec1, vec2):
-        """ Returns the cos sim of two vectors.
+      index: the inverted index as above,
 
-        Helper for cos_rank
-        """
-        num = np.dot(vec1, vec2)
-        den = (np.linalg.norm(vec1)) * (np.linalg.norm(vec2))
-        if den == 0:
-          return 0
-        else:
-          num / den
+      idf: dict,
+          Precomputed idf values for the terms.
+      doc_scores: dict
+          Dictionary mapping from doc ID to the final accumulated score for that doc
+      """
+      doc_scores = dict()
+      q_norm = 0
+      for query_word in query_word_counts.keys():
+        if query_word in idf.keys():
+          q_tf = query_word_counts[query_word]
+          q_j = q_tf* idf[query_word]
+          for doc_tuple in index[query_word]:
+            doc = doc_tuple[0]
+            d_tf = doc_tuple[1]
+            d_ij = d_tf * idf[query_word]
+            if doc not in doc_scores.keys():
+              doc_scores[doc] = 0
+            doc_scores[doc] += d_ij* q_j
 
-    def cos_rank(self, query, doc_by_vocab):
-        """ Returns a tuple list that represents the doc indexes and their
-            similarity scores to the query.
+      return doc_scores
 
-            Known Problems: This needs to be updated to use document ids (when we 
-                            make those).
 
-            Params:
-            query: ?? by 1 string np array
-                The desired ingredients, as computed by make_query
-            doc_by_vocab: ?? by ?? np array
-                The doc by vocab matrix as computed by make_matrix
+  def index_search(
+      self,
+      query: str,
+      index: dict,
+      idf,
+      doc_norms,
+      score_func=accumulate_dot_scores,
+      tokenizer=TreebankWordTokenizer(),
+  ) -> List[Tuple[int, int]]:
+      """Search the collection of documents for the given query
 
-            Returns:
-                An (int, int) list where list[0] is the doc index, and list[1] is
-                the similarity to the query.
-        """
-        retval = []
+      Arguments
+      =========
 
-        for d in range(len(doc_by_vocab)):
-            doc = doc_by_vocab[d]
-            sim = self.cos_sim(query, doc)
-            # adjust by popularity
-            sim += self.authors_to_ratings[self.author_index_to_name[d]] * 0.02
-            retval.append([d, sim])
-        sorted_list = list(sorted(retval, reverse=True, key=lambda x: x[1]))
-        return sorted_list
+      query: string,
+          The query we are looking for.
 
-    def comma_space_split(self, str):
-        return [i for i in ",".join(str.split(" ")).split(",") if i]
-    
-    def make_query(self, tokens, vectorizer, doc_by_vocab):
-        """ Returns a query vector made from tokens that matches the term matrix 
-            doc_by_vocab.
+      index: an inverted index as above
 
-        Parameters:
-        tokens: str list or str set
-            The tokens that make up a query. 
-        vectorizer: tfidf vectorizer object
-            The doc by vocab matrix as computed by make_matrix
-        doc_by_vocab: tfidf or boolean matrix
-        """
-        vocab_to_index = {v: i for i, v in enumerate(
-            vectorizer.get_feature_names())}
-        retval = np.zeros_like(doc_by_vocab[0])
-        for t in tokens:
-            try:
-                ind = vocab_to_index[t]
-                retval[ind] = 1
-            except:
-                # token not in matrix
-                continue
-        return retval
+      idf: idf values precomputed as above
 
-    def query(self, text_description):
-        # initialize variables
-        matrix = self.description_doc_by_vocab
+      doc_norms: document norms as computed above
 
-        rank_list = None
-        # the list of indices to return (used by boolean and/not)
-        idx_list = None
-        # initialize as vector of 0s:
-        pref_vec = self.make_query(
-            [""], self.descriptions_tfidf_vectorizer, matrix)
-        cos_rank = None
+      score_func: function,
+          A function that computes the numerator term of cosine similarity (the dot product) for all documents.
+          Takes as input a dictionary of query word counts, the inverted index, and precomputed idf values.
+          (See Q7)
 
-        # vectorize inputs, if necessry
-        if text_description:
-            pref_vec = self.make_query(
-                [word.strip().lower()
-                 for word in self.comma_space_split(text_description)],
-                self.descriptions_tfidf_vectorizer,
-                matrix)
-        # cosine sim:
-        cos_rank = self.cos_rank(pref_vec, matrix)
-        rank_list = [{
-            'author': self.author_index_to_name[i[0]],
-            'description': self.authors_to_description[self.author_index_to_name[i[0]]],
-            'genres': self.authors_to_genre[self.author_index_to_name[i[0]]],
-            'rating': self.authors_to_ratings[self.author_index_to_name[i[0]]],
-        } for i in cos_rank]
+      tokenizer: a TreebankWordTokenizer
 
-        matrix = matrix[idx_list]
-        rank_list = [
-            i for i in rank_list
-            if self.author_name_to_index[i['author']] in idx_list]
+      Returns
+      =======
 
-        return rank_list
+      results, list of tuples (score, doc_id)
+          Sorted list of results such that the first element has
+          the highest score, and `doc_id` points to the document
+          with the highest score.
+      """
+      results = []
+      query_toks = tokenizer.tokenize(query.lower())
+      query_word_count = dict()
+      q_norm = 0
+      for tok in query_toks:
+        if tok not in query_word_count.keys():
+          query_word_count[tok] = 0
+        query_word_count[tok] += 1
+      for i in query_word_count.keys():
+        if i in idf.keys():
+          tf_i = query_word_count[i]
+          idf_i = idf[i]
+          q_norm += (tf_i * idf_i) ** 2
+      q_norm = math.sqrt(q_norm)
 
+      dot_scores = score_func(query_word_count, index, idf)
+      for doc_id in dot_scores.keys():
+        doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
+        results.append((doc_score, doc_id))
+
+      results.sort(key=lambda x: x[0], reverse=True)
+      return results
+
+  def query(self,query_string : str):
+    flat_msgs = []
+    for description in self.descriptions:
+      descript_toks = TreebankWordTokenizer().tokenize(description[0])
+      flat_msgs.append({"toks" : descript_toks})
+    inv_idx = self.build_inverted_index(flat_msgs)
+    idf = self.compute_idf(inv_idx, len(flat_msgs), min_df = 5)
+    inv_idx = {key: val for key, val in inv_idx.items() if key in idf} # prune the terms left out by idf
+    doc_norms = self.compute_doc_norms(inv_idx, idf, len(flat_msgs))
+    ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
+    rank_list = [{
+            'author': self.author_index_to_name[i[1]],
+            'description': self.authors_to_descriptions[self.author_index_to_name[i[1]]],
+            'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
+            'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
+        } for i in ranked_results]
+
+    return rank_list
+  
 if __name__ == "__main__":
-    authoria = Authoria()
-    print(authoria.authors_to_ratings)
+    authoria = Authoria_new()
