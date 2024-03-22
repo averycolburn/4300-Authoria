@@ -42,6 +42,13 @@ authoria = Authoria()
 def home():
     return render_template('base.html',title="sample html")
 
+# from https://stackoverflow.com/questions/22281059/set-object-is-not-json-serializable
+def set_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
+
+
 @app.route("/query")
 def episodes_search():
     text = request.args.get("description")
@@ -62,8 +69,8 @@ def episodes_search():
             res[i] = dict(res[i])
         else:
             res[i] = dict(res[i])
-
-    return json.dumps(res)
+    j = json.dumps(res, default = set_default)
+    return j
 
 if 'DB_NAME' not in os.environ:
     app.run(debug=True,host="0.0.0.0",port=5000)
