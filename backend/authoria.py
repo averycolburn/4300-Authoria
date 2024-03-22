@@ -339,7 +339,7 @@ class Authoria:
     ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
     rank_list = [{
             'author': self.author_index_to_name[i[1]],
-            'description': self.authors_to_descriptions[self.author_index_to_name[i[1]]],
+            # 'description': self.authors_to_descriptions[self.author_index_to_name[i[1]]],
             'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
             'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
         } for i in ranked_results]

@@ -61,7 +61,7 @@
                 .then((data) => data.forEach(row => {
                     let tempDiv = document.createElement("div")
                     tempDiv.innerHTML = answerBoxTemplate(row.author,
-                        row.rating, row.genres)
+                        row.genre, row.rating)
                     document.getElementById("answer-box").appendChild(tempDiv)
                 }));
         }

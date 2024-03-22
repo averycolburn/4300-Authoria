@@ -52,8 +52,6 @@ def set_default(obj):
 @app.route("/query")
 def episodes_search():
     text = request.args.get("description")
-    print(text)
-    print(type(text))
     # return sql_search(text)
 
     max_pop = -1
@@ -70,6 +68,7 @@ def episodes_search():
         else:
             res[i] = dict(res[i])
     j = json.dumps(res, default = set_default)
+    print(j)
     return j
 
 if 'DB_NAME' not in os.environ:
