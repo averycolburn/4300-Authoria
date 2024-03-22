@@ -297,7 +297,7 @@ class Authoria:
           q_norm += (tf_i * idf_i) ** 2
       q_norm = math.sqrt(q_norm)
 
-      dot_scores = score_func(query_word_count, index, idf)
+      dot_scores = score_func(self, query_word_count, index, idf)
       for doc_id in dot_scores.keys():
         doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
         results.append((doc_score, doc_id))
@@ -321,7 +321,7 @@ class Authoria:
             'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
             'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
         } for i in ranked_results]
-
+    print(rank_list)
     return rank_list
   
 if __name__ == "__main__":

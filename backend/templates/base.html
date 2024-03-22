@@ -25,10 +25,11 @@
 
     <script>
 
-        function answerBoxTemplate(author, authorDesc) {
+        function answerBoxTemplate(author, genres, rating) {
             return `<div class=''>
                 <h3 class='author-name'>${author}</h3>
-                <p class='author-tags'>${authorDesc}</p>
+                <p class='author-tags'>${genres}</p>
+                <p class='author-tags'>${rating}</p>
             </div>`
         }
 
@@ -38,8 +39,8 @@
 
         // function filterText() {
         //     document.getElementById("answer-box").innerHTML = ""
-        //     console.log(document.getElementById("filter-text-val").value)
-        //     fetch("/query?" + new URLSearchParams({ title: document.getElementById("filter-text-val").value }).toString())
+        //     console.log(document.getElementById("text-description").value)
+        //     fetch("/query?" + new URLSearchParams({ title: document.getElementById("text-description").value }).toString())
         //         .then((response) => response.json())
         //         .then((data) => data.forEach(row => {
 
@@ -52,14 +53,15 @@
 
         function filterText(event) {
             document.getElementById("answer-box").innerHTML = ""
-
+            console.log(document.getElementById("text-description").value)
             fetch("/query?" + new URLSearchParams({
                 description: document.getElementById("text-description").value
             }).toString())
                 .then((response) => response.json())
                 .then((data) => data.forEach(row => {
                     let tempDiv = document.createElement("div")
-                    tempDiv.innerHTML = answerBoxTemplate(row.author, row.description, row.rating, row.genres)
+                    tempDiv.innerHTML = answerBoxTemplate(row.author,
+                        row.rating, row.genres)
                     document.getElementById("answer-box").appendChild(tempDiv)
                 }));
         }

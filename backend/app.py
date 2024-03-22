@@ -44,7 +44,7 @@ def home():
 
 @app.route("/query")
 def episodes_search():
-    text = request.args.get("text-description")
+    text = request.args.get("description")
     print(text)
     print(type(text))
     # return sql_search(text)
