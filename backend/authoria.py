@@ -4,6 +4,8 @@ from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
 
+
+
 class Authoria:
   def __init__(self):
       """Dictionary of {author: genres}"""
@@ -12,8 +14,11 @@ class Authoria:
       """Dictionary of {authors: descriptions}"""
       self.authors_to_descriptions = self.read_file_description('data/seven_k_books.csv')
 
-      """Dictionary of {authors: average rating}"""
-      self.authors_to_ratings = self.read_file_popularity('data/seven_k_books.csv')
+      # """Dictionary of {authors: average rating}"""
+      # self.authors_to_ratings = self.read_file_popularity('data/seven_k_books.csv')      
+      
+      """Dictionary of {authors: average rating}, {authors: weighted rating}"""
+      self.authors_to_ratings , self.authors_to_weighted_ratings = self.read_file_popularity('data/seven_k_books.csv')
 
       """Number of authors"""
       self.num_authors = len(self.authors_to_genre)
@@ -71,31 +76,47 @@ class Authoria:
     return author_description_dict
 
   def read_file_popularity(self, filepath):
-    """ Returns a dictionary of format {'author' : average rating}
+    """ Returns a 2 dictionaries of format {'author' : average rating}, {'author' : average weighted rating}
           Parameters:
           filepath: path to file
           """
     author_popularity_dict = {}
+    avg_popularity_dict = {} #sofia 3/21
     author_avg_popularity_dict = {}
+    author_weighted_avg_dict = {} #sofia 3/21
     with open(filepath, 'r', encoding='utf-8') as file:
       csv_reader = csv.DictReader(file)
       for row in csv_reader:
         authors = row['authors'].split(', ')
         avg_rating = row['average_rating']
+        r_c=0 #ratings count is automatically 0 unless weighted #sofia 3/21
+        ratings_count = row['ratings_count']
+        if ratings_count!="": #sofia 3/21
+          r_c = float(ratings_count) #sofia 3/21
         if avg_rating != '':
-          popularity = float(row['average_rating'])
-        else: popularity = 0
-        for author in authors:
-          if author not in author_popularity_dict:
+          popularity = float(row['average_rating']) 
+          w_pop = popularity + r_c/100 #number of review for this book #sofia 3/21
+        else: popularity , w_pop = 0,0 #edited by sofia 3/21, can remove w_pop to remove sofia edit
+        for author in authors: 
+          if author not in author_popularity_dict: 
             author_popularity_dict[author] = []
+            avg_popularity_dict[author] = []
           author_popularity_dict[author].append(popularity)
+          avg_popularity_dict[author].append(w_pop)
           for key, value in author_popularity_dict.items():
             if len(value) == 0:
               average_value = 0
             else:
               average_value = sum(value)/len(value)
-            author_avg_popularity_dict[key] = average_value
-    return author_avg_popularity_dict
+            author_avg_popularity_dict[key] = average_value    
+          #sofia 3/21
+          for key, value in avg_popularity_dict.items():
+            if len(value) == 0:
+              average_value = 0
+            else:
+              average_value = sum(value)/len(value)
+            author_weighted_avg_dict[key] = average_value
+    return author_avg_popularity_dict, author_weighted_avg_dict
 
   def build_inverted_index(self, msgs: List[dict]) -> dict:
       """Builds an inverted index from the messages.
@@ -239,11 +260,11 @@ class Authoria:
             d_ij = d_tf * idf[query_word]
             if doc not in doc_scores.keys():
               doc_scores[doc] = 0
-            doc_scores[doc] += d_ij* q_j
+            doc_scores[doc] += d_ij* q_j + self.authors_to_weighted_ratings[self.author_index_to_name[doc]]/10 #sofia 3/21
 
       return doc_scores
 
-
+ 
   def index_search(
       self,
       query: str,
@@ -306,6 +327,7 @@ class Authoria:
       return results
 
   def query(self,query_string : str):
+    
     flat_msgs = []
     for description in self.descriptions:
       descript_toks = TreebankWordTokenizer().tokenize(description[0])
@@ -323,6 +345,8 @@ class Authoria:
         } for i in ranked_results]
     print(rank_list)
     return rank_list
+  
+
   
 if __name__ == "__main__":
     authoria = Authoria()
