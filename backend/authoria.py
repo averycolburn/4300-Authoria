@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 import csv 
 from typing import List, Tuple, Dict
 import math
@@ -226,7 +226,7 @@ class Authoria:
       for doc in summ_dict.keys():
         norms.append(math.sqrt(summ_dict[doc]))
 
-      return np.array(norms)
+      return (norms)
 
 
   def accumulate_dot_scores(self, query_word_counts: dict, index: dict, idf: dict) -> dict:
