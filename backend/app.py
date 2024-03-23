@@ -68,7 +68,6 @@ def episodes_search():
         else:
             res[i] = dict(res[i])
     j = json.dumps(res, default = set_default)
-    print(j)
     return j
 
 if 'DB_NAME' not in os.environ:
