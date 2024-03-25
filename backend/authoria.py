@@ -14,8 +14,8 @@ class Authoria:
       """Dictionary of {authors: descriptions}"""
       self.authors_to_descriptions = self.read_file_description('data/seven_k_books.csv')
 
-      # """Dictionary of {authors: average rating}"""
-      # self.authors_to_ratings = self.read_file_popularity('data/seven_k_books.csv')      
+      """Dictionary of {authors: book titles}"""
+      self.authors_to_books = self.read_file_books('data/seven_k_books.csv')      
       
       """Dictionary of {authors: average rating}, {authors: weighted rating}"""
       self.authors_to_ratings , self.authors_to_weighted_ratings = self.read_file_popularity('data/seven_k_books.csv')
@@ -58,8 +58,25 @@ class Authoria:
           author_genre_dict[author].add(genre)
     return author_genre_dict
 
+  def read_file_books(self, filepath):
+    """ Returns a dictionary of format {'author' : 'descriptions'}
+          Parameters:
+          filepath: path to file
+          """
+    author_title_dict = {}
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for row in csv_reader:
+        authors = row['authors'].split(', ')
+        title = row['title']
+        for author in authors:
+              if author not in author_title_dict:
+                author_title_dict[author] = []
+              author_title_dict[author].append(title)
+    return author_title_dict
+  
   def read_file_description(self, filepath):
-    """ Returns a dictionary of format {'author' : 'genre1, genre2'}
+    """ Returns a dictionary of format {'author' : book titles}
           Parameters:
           filepath: path to file
           """
@@ -339,11 +356,10 @@ class Authoria:
     ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
     rank_list = [{
             'author': self.author_index_to_name[i[1]],
-            # 'description': self.authors_to_descriptions[self.author_index_to_name[i[1]]],
+            'titles' : self.authors_to_books[self.author_index_to_name[i[1]]],
             'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
             'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
         } for i in ranked_results]
-    print(rank_list)
     return rank_list
   
 

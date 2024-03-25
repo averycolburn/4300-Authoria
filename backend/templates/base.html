@@ -25,31 +25,18 @@
 
     <script>
 
-        function answerBoxTemplate(author, genres, rating) {
+        function answerBoxTemplate(author, titlelst, genres, rating) {
             return `<div class=''>
                 <h3 class='author-name'>${author}</h3>
-                <p class='author-tags'>${genres}</p>
-                <p class='author-tags'>${rating}</p>
+                <h3 class='author-tags'> Titles: ${titlelst}</h3>
+                <p class='author-tags'> Genres/Themes:${genres}</p>
+                <p class='author-tags'> Average Rating: ${rating}</p>
             </div>`
         }
 
         function sendFocus() {
             document.getElementById('text-description').focus()
         }
-
-        // function filterText() {
-        //     document.getElementById("answer-box").innerHTML = ""
-        //     console.log(document.getElementById("text-description").value)
-        //     fetch("/query?" + new URLSearchParams({ title: document.getElementById("text-description").value }).toString())
-        //         .then((response) => response.json())
-        //         .then((data) => data.forEach(row => {
-
-        //             let tempDiv = document.createElement("div")
-        //             tempDiv.innerHTML = answerBoxTemplate("result", "description")
-        //             document.getElementById("answer-box").appendChild(tempDiv)
-        //         }));
-
-        // }
 
         function filterText(event) {
             document.getElementById("answer-box").innerHTML = ""
@@ -60,8 +47,8 @@
                 .then((response) => response.json())
                 .then((data) => data.forEach(row => {
                     let tempDiv = document.createElement("div")
-                    tempDiv.innerHTML = answerBoxTemplate(row.author,
-                        row.genre, row.rating)
+                    tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
+                        row.genres, row.rating)
                     document.getElementById("answer-box").appendChild(tempDiv)
                 }));
         }
