@@ -172,6 +172,7 @@ class Authoria:
       msg_index = 0
       for msg in msgs:
         toks = msg["toks"]
+        toks = [x.lower() for x in toks]
         tok_msg_tracker = dict.fromkeys(toks, 0) #dict to count number of times each tok appears in the message
         for token in toks:
           tok_msg_tracker[token] += 1
@@ -182,7 +183,7 @@ class Authoria:
         msg_index += 1
       return inverted_dict
 
-  def compute_idf(self, inv_idx, n_docs, min_df=10, max_df_ratio=0.95):
+  def compute_idf(self, inv_idx, n_docs, min_df=5, max_df_ratio=0.9):
       """Compute term IDF values from the inverted index.
       Words that are too frequent or too infrequent get pruned.
 
@@ -210,7 +211,7 @@ class Authoria:
       """
       idf_trimmed = dict()
       for term in inv_idx.keys():
-        # term = term.lower()
+        term = term.lower()
         df_t = len(inv_idx[term])
         if df_t >= min_df and (df_t/n_docs) <= max_df_ratio:
           idf_t = math.log2(n_docs/ (1+ df_t) )
@@ -277,7 +278,7 @@ class Authoria:
             d_ij = d_tf * idf[query_word]
             if doc not in doc_scores.keys():
               doc_scores[doc] = 0
-            doc_scores[doc] += d_ij* q_j + self.authors_to_weighted_ratings[self.author_index_to_name[doc]]/10 #sofia 3/21
+            doc_scores[doc] += d_ij* q_j+ self.authors_to_weighted_ratings[self.author_index_to_name[doc]]/10 #sofia 3/21
 
       return doc_scores
 
