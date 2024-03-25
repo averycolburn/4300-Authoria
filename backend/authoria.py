@@ -266,6 +266,7 @@ class Authoria:
       doc_scores: dict
           Dictionary mapping from doc ID to the final accumulated score for that doc
       """
+      k = 1/1000 #k is weight for impact of author popularity
       doc_scores = dict()
       q_norm = 0
       for query_word in query_word_counts.keys():
@@ -278,7 +279,7 @@ class Authoria:
             d_ij = d_tf * idf[query_word]
             if doc not in doc_scores.keys():
               doc_scores[doc] = 0
-            doc_scores[doc] += d_ij* q_j+ self.authors_to_weighted_ratings[self.author_index_to_name[doc]]/10 #sofia 3/21
+            doc_scores[doc] += d_ij* q_j+ self.authors_to_weighted_ratings[self.author_index_to_name[doc]]*k #sofia 3/21
 
       return doc_scores
 
