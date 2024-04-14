@@ -40,6 +40,26 @@ class Authoria:
       self.descriptions = [self.authors_to_descriptions[author] for author in
                         self.authors_to_descriptions]
       
+      """Set of common words"""
+      self.common = self.read_common_words('data/unigram_freq.csv',5) #pick number of common words to exclude here
+
+
+  def read_common_words(self, filepath, n):
+    """ Returns a set of the n most common words in the dataset at filepath
+          Parameters:
+          filepath: path to file
+          n: number of common words to exclude
+    """
+    common = set()
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for x in range(n):
+        row = next(csv_reader)
+        print(row["word"])
+        common.add(row['word'])
+        x+=1
+    return common
+      
   def read_file_genre(self, filepath):
     """ Returns a dictionary of format {'author' : 'genre1, genre2'}
           Parameters:
@@ -327,16 +347,16 @@ class Authoria:
       query_word_count = dict()
       q_norm = 0
       for tok in query_toks:
-        if tok not in query_word_count.keys():
-          query_word_count[tok] = 0
-        query_word_count[tok] += 1
+        if not (tok in self.common): #sofia 4/14
+          if tok not in query_word_count.keys():
+            query_word_count[tok] = 0
+          query_word_count[tok] += 1
       for i in query_word_count.keys():
         if i in idf.keys():
           tf_i = query_word_count[i]
           idf_i = idf[i]
           q_norm += (tf_i * idf_i) ** 2
       q_norm = math.sqrt(q_norm)
-
       dot_scores = score_func(self, query_word_count, index, idf)
       for doc_id in dot_scores.keys():
         doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
