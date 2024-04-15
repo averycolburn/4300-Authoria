@@ -6,6 +6,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from scipy.sparse.linalg import svds
 from collections import defaultdict 
+# from scipy.sparse.linalg import svds
+
 
 
 
@@ -422,8 +424,9 @@ def closest_words(self, word_in, k=10):
 
         word_index = word_to_index[word_in]
         sims = self.td_matrix.dot(self.td_matrix[word_index, :].T).toarray().ravel()
-        asort = np.argsort(-sims)[:k + 1]
+        asort = sorted(range(len(sims)),key=lambda i: (-sims)[i])[:k + 1]
         return [(index_to_word[i], sims[i]) for i in asort[1:]]
+
 
 
   
