@@ -3,6 +3,9 @@ from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+from scipy.sparse.linalg import svds
+from collections import defaultdict 
 # from scipy.sparse.linalg import svds
 
 
@@ -294,6 +297,7 @@ class Authoria:
       """
       k = 1/1000 #k is weight for impact of author popularity
       doc_scores = dict()
+      word_scores=defaultdict(dict)
       q_norm = 0
       for query_word in query_word_counts.keys():
         if query_word in idf.keys():
@@ -305,9 +309,14 @@ class Authoria:
             d_ij = d_tf * idf[query_word]
             if doc not in doc_scores.keys():
               doc_scores[doc] = 0
+            if(query_word in word_scores[doc]):
+               word_scores[doc][query_word]+=d_ij*q_j
+            else:
+               word_scores[doc][query_word]=d_ij*q_j
+            # word_scores[doc][query_word]+= d_ij*q_j
             doc_scores[doc] += d_ij* q_j+ self.authors_to_weighted_ratings[self.author_index_to_name[doc]]*k #sofia 3/21
 
-      return doc_scores
+      return doc_scores, word_scores
 
  
   def index_search(
@@ -349,6 +358,8 @@ class Authoria:
           with the highest score.
       """
       results = []
+      # dot_scores, words=score_func(self, query_word_count, index, idf)
+      # highest_contributors=defaultdict(int)
       query_toks = tokenizer.tokenize(query.lower())
       query_word_count = dict()
       q_norm = 0
@@ -362,12 +373,15 @@ class Authoria:
           tf_i = query_word_count[i]
           idf_i = idf[i]
           q_norm += (tf_i * idf_i) ** 2
+          # highest_contributors[i]+= (tf_i * idf_i) ** 2
       q_norm = math.sqrt(q_norm)
-      dot_scores = score_func(self, query_word_count, index, idf)
+      dot_scores,  words = score_func(self, query_word_count, index, idf)
       for doc_id in dot_scores.keys():
         doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
-        results.append((doc_score, doc_id))
-
+        common_words=words[doc_id]
+        sort_words=sorted(common_words, key=common_words.get, reverse=True)
+        results.append((doc_score, doc_id, sort_words[0:2]))
+      # highest_contributors.sort(key=lambda x: x[1], reverse=True)
       results.sort(key=lambda x: x[0], reverse=True)
       return results
 
@@ -387,6 +401,8 @@ class Authoria:
             'titles' : self.authors_to_books[self.author_index_to_name[i[1]]],
             'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
             'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
+            'score':round(i[0]*100,2),
+            'commonwords': i[2]
         } for i in ranked_results]
     return rank_list
   
