@@ -3,7 +3,7 @@ from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from scipy.sparse.linalg import svds
+# from scipy.sparse.linalg import svds
 
 
 
