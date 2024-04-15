@@ -3,13 +3,8 @@ from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
-from scipy.sparse.linalg import svds
-from collections import defaultdict 
 # from scipy.sparse.linalg import svds
-
-
-
+from collections import defaultdict 
 
 class Authoria:
   def __init__(self):
