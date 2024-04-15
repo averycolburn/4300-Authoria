@@ -19,8 +19,8 @@ pycparser==2.21
 PyMySQL==1.0.2
 regex==2023.12.25
 scipy
-sklearn
 six==1.16.0
+sklearn
 smmap==5.0.0
 SQLAlchemy==1.4.46
 threadpoolctl==3.4.0
