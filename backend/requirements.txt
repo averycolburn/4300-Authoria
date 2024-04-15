@@ -20,4 +20,5 @@ SQLAlchemy==1.4.46
 typing_extensions==4.5.0
 Werkzeug==2.2.2
 nltk==3.8.1
+scikit-learn==1.4.2
 

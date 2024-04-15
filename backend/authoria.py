@@ -1,8 +1,11 @@
-# import numpy as np
 import csv 
 from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+from scipy.sparse.linalg import svds
+
 
 
 
@@ -41,7 +44,11 @@ class Authoria:
                         self.authors_to_descriptions]
       
       """Set of common words"""
-      self.common = self.read_common_words('data/unigram_freq.csv',5) #pick number of common words to exclude here
+      self.common = self.read_common_words('data/unigram_freq.csv',100) #pick number of common words to exclude here
+
+      """Set of closest words using SVD"""
+      self.vectorizer, self.td_matrix = self.vectorize_descriptions('data/seven_k_books.csv')
+      
 
 
   def read_common_words(self, filepath, n):
@@ -384,6 +391,27 @@ class Authoria:
         } for i in ranked_results]
     return rank_list
   
+  def vectorize_descriptions(self, filepath):
+        with open(filepath, 'r', encoding='utf-8') as file:
+            csv_reader = csv.DictReader(file)
+            descriptions = [row['description'] for row in csv_reader]
+
+        vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7, min_df=75)
+        td_matrix = vectorizer.fit_transform(descriptions)
+        return vectorizer, td_matrix
+
+def closest_words(self, word_in, k=10):
+        word_to_index = self.vectorizer.vocabulary_
+        index_to_word = {i: t for t, i in word_to_index.items()}
+
+        if word_in not in word_to_index:
+            return "Not in vocab."
+
+        word_index = word_to_index[word_in]
+        sims = self.td_matrix.dot(self.td_matrix[word_index, :].T).toarray().ravel()
+        asort = np.argsort(-sims)[:k + 1]
+        return [(index_to_word[i], sims[i]) for i in asort[1:]]
+
 
   
 if __name__ == "__main__":
