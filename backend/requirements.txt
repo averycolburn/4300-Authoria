@@ -16,7 +16,9 @@ protobuf==3.20.3
 pycparser==2.21
 PyMySQL==1.0.2
 regex==2023.12.25
-scipy==1.13.0
+scipy
+importlib_metadata==7.1.0
+joblib==1.4.0
 six==1.16.0
 smmap==5.0.0
 SQLAlchemy==1.4.46
