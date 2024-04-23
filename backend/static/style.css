@@ -82,12 +82,24 @@
     margin-top: 50px;
 }
 
+.featured-book-box {
+    width: 600px;
+    margin-left: 20px;
+    background-color: lightskyblue;
+    border-radius: 5px;
+    outline-style: solid;
+    outline-color: lightskyblue;
+    outline-width: medium;
+    font-family: 'Montserrat', sans-serif;
+}
+
 .author-name {
     font-family: 'Kanit', sans-serif;
 }
 
 .author-tags {
     font-family: 'Montserrat', sans-serif;
+    text-indent: 10px;
 }
 
 .authoria-text {

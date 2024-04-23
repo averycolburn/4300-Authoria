@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit&family=Montserrat&family=Open+Sans:wght@500&display=swap"
     rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
 <body>
     <div class="full-body-container">
@@ -17,6 +18,9 @@
                 <img src="{{ url_for('static', filename='images/search.png') }}" />
                 <input type="search" placeholder="Input Author Description" id="text-description"
                     onsearch="filterText()">
+                <!-- <button class="buttonload">
+                    <i class="fa fa-spinner fa-spin"></i>Loading
+                </button> -->
             </div>
         </div>
         <div id="answer-box">
@@ -26,14 +30,18 @@
 
     <script>
 
-        function answerBoxTemplate(author, titlelst, genres, rating, score, common) {
+        function answerBoxTemplate(author, titlelst, genres, rating, score, common, feature_title, feature_descrip) {
             return `<div class=''>
                 <h3 class='author-name'>${author}</h3>
                 <p class='author-tags'> Titles: ${titlelst}</h3>
-                <p class='author-tags'> Genres/Themes:${genres}</p>
+                <div class = "featured-book-box">
+                    <h4> Featured Title: ${feature_title}</h4>
+                    <p> Book Description: ${feature_descrip}</p>
+                </div>
+                <p class='author-tags'> Genres/Themes: ${genres}</p>
                 <p class='author-tags'> Average Rating: ${rating}</p>
-                <p class='author-tags'> Score: ${score}
-                <p class='author-tags'> Similarities: ${common}
+                <p class='author-tags'> Similarity Score: ${score}
+                <p class='author-tags'> Themes in Common with Query: ${common}
             </div>`
         }
 
@@ -51,7 +59,7 @@
                 .then((data) => data.forEach(row => {
                     let tempDiv = document.createElement("div")
                     tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
-                        row.genres, row.rating, row.score, row.commonwords)
+                        row.genres, row.rating, row.score, row.commonwords, row.feature_title, row.feature_descrip)
                     document.getElementById("answer-box").appendChild(tempDiv)
                 }));
         }

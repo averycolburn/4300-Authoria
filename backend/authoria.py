@@ -11,6 +11,9 @@ class Authoria:
       """Dictionary of {author: genres}"""
       self.authors_to_genre = self.read_file_genre('data/seven_k_books.csv')
 
+      """Dictionary of {book title (string): description (string)}"""
+      self.book_to_descrip = self.read_book_descrip('data/seven_k_books.csv')
+
       """Dictionary of {authors: descriptions}"""
       self.authors_to_descriptions = self.read_file_description('data/seven_k_books.csv')
 
@@ -59,7 +62,7 @@ class Authoria:
       csv_reader = csv.DictReader(file)
       for x in range(n):
         row = next(csv_reader)
-        print(row["word"])
+        # print(row["word"])
         common.add(row['word'])
         x+=1
     return common
@@ -81,12 +84,27 @@ class Authoria:
               author_genre_dict[author] = set() 
           author_genre_dict[author].add(genre)
     return author_genre_dict
+  
+  def read_book_descrip(self, filepath):
+    """ Returns a dictionary of format {'author' : 'genre1, genre2'}
+          Parameters:
+          filepath: path to file
+          """
+    book_descrip_dict = {}
+    with open(filepath, 'r', encoding='utf-8') as file:
+      csv_reader = csv.DictReader(file)
+      for row in csv_reader:
+        title = row['title']
+        descrip = row['description']
+        book_descrip_dict[title] = descrip
+    return book_descrip_dict
 
   def read_file_books(self, filepath):
     """ Returns a dictionary of format {'author' : 'descriptions'}
           Parameters:
           filepath: path to file
-          """
+        Descriptions is a string list.
+    """
     author_title_dict = {}
     with open(filepath, 'r', encoding='utf-8') as file:
       csv_reader = csv.DictReader(file)
@@ -391,14 +409,21 @@ class Authoria:
     inv_idx = {key: val for key, val in inv_idx.items() if key in idf} # prune the terms left out by idf
     doc_norms = self.compute_doc_norms(inv_idx, idf, len(flat_msgs))
     ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
-    rank_list = [{
-            'author': self.author_index_to_name[i[1]],
-            'titles' : self.authors_to_books[self.author_index_to_name[i[1]]],
-            'genres': self.authors_to_genre[self.author_index_to_name[i[1]]],
-            'rating': self.authors_to_ratings[self.author_index_to_name[i[1]]],
+    rank_list = [] 
+    for i in ranked_results: 
+      author_name = self.author_index_to_name[i[1]]
+      book_lst = self.authors_to_books[author_name]
+      author_profile = {
+            'author': author_name,
+            'titles' : self.authors_to_books[author_name],
+            'genres': self.authors_to_genre[author_name],
+            'rating': self.authors_to_ratings[author_name],
             'score':round(i[0]*100,2),
-            'commonwords': i[2]
-        } for i in ranked_results]
+            'common': i[2],
+            'feature_title': book_lst[0],
+            'feature_descrip': self.book_to_descrip[book_lst[0]]
+        }
+      rank_list.append(author_profile)
     return rank_list
   
   def vectorize_descriptions(self, filepath):
@@ -411,16 +436,16 @@ class Authoria:
         return vectorizer, td_matrix
 
 def closest_words(self, word_in, k=10):
-        word_to_index = self.vectorizer.vocabulary_
-        index_to_word = {i: t for t, i in word_to_index.items()}
+    word_to_index = self.vectorizer.vocabulary_
+    index_to_word = {i: t for t, i in word_to_index.items()}
 
-        if word_in not in word_to_index:
-            return "Not in vocab."
+    if word_in not in word_to_index:
+      return "Not in vocab."
 
-        word_index = word_to_index[word_in]
-        sims = self.td_matrix.dot(self.td_matrix[word_index, :].T).toarray().ravel()
-        asort = sorted(range(len(sims)),key=lambda i: (-sims)[i])[:k + 1]
-        return [(index_to_word[i], sims[i]) for i in asort[1:]]
+    word_index = word_to_index[word_in]
+    sims = self.td_matrix.dot(self.td_matrix[word_index, :].T).toarray().ravel()
+    asort = sorted(range(len(sims)),key=lambda i: (-sims)[i])[:k + 1]
+    return [(index_to_word[i], sims[i]) for i in asort[1:]]
 
 
 
