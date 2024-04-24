@@ -234,6 +234,17 @@ class Authoria:
         msg_index += 1
       return inverted_dict
 
+  def compute_idf_bk(self, inv_idx, n_docs):
+
+      idf_trimmed = dict()
+      for term in inv_idx.keys():
+        term = term.lower()
+        df_t = len(inv_idx[term])
+        idf_t = n_docs/ df_t
+        idf_trimmed[term] = idf_t
+
+      return idf_trimmed
+
   def compute_idf(self, inv_idx, n_docs, min_df=5, max_df_ratio=0.9):
       """Compute term IDF values from the inverted index.
       Words that are too frequent or too infrequent get pruned.
@@ -297,6 +308,18 @@ class Authoria:
 
       return (norms)
 
+  def accumulate_dot_scores_bk(self, query_word_counts: dict, index: dict, idf: dict, num_of_docs : int) -> dict:
+      doc_scores = dict.fromkeys(range(num_of_docs), 0) #all books have 0 score
+      for query_word in query_word_counts.keys():
+        if query_word in idf.keys():
+          q_tf = query_word_counts[query_word]
+          q_j = q_tf* idf[query_word]
+          for doc_tuple in index[query_word]:
+            doc = doc_tuple[0]
+            d_tf = doc_tuple[1]
+            d_ij = d_tf * idf[query_word]
+            doc_scores[doc] += d_ij* q_j
+      return doc_scores
 
   def accumulate_dot_scores(self, query_word_counts: dict, index: dict, idf: dict) -> dict:
       """Perform a term-at-a-time iteration to efficiently compute the numerator term of cosine similarity across multiple documents.
@@ -320,7 +343,6 @@ class Authoria:
       k = 1/1000 #k is weight for impact of author popularity
       doc_scores = dict()
       word_scores=defaultdict(dict)
-      q_norm = 0
       for query_word in query_word_counts.keys():
         if query_word in idf.keys():
           q_tf = query_word_counts[query_word]
@@ -340,6 +362,69 @@ class Authoria:
 
       return doc_scores, word_scores
 
+  def index_search_bk(
+      self,
+      query: str,
+      index: dict,
+      idf,
+      doc_norms,
+      num_bks,
+      tokenizer=TreebankWordTokenizer()
+  ) -> List[Tuple[int, int]]:
+      """Search the collection of documents for the given query
+
+      Arguments
+      =========
+
+      query: string,
+          The query we are looking for.
+
+      index: an inverted index as above
+
+      idf: idf values precomputed as above
+
+      doc_norms: document norms as computed above
+
+      score_func: function,
+          A function that computes the numerator term of cosine similarity (the dot product) for all documents.
+          Takes as input a dictionary of query word counts, the inverted index, and precomputed idf values.
+          (See Q7)
+
+      tokenizer: a TreebankWordTokenizer
+
+      Returns
+      =======
+
+      results, list of tuples (score, doc_id)
+          Sorted list of results such that the first element has
+          the highest score, and `doc_id` points to the document
+          with the highest score.
+      """
+      results = []
+      # dot_scores, words=score_func(self, query_word_count, index, idf)
+      # highest_contributors=defaultdict(int)
+      query_toks = tokenizer.tokenize(query.lower())
+      query_word_count = dict()
+      q_norm = 0
+      for tok in query_toks:
+          if tok not in query_word_count.keys():
+            query_word_count[tok] = 0
+          query_word_count[tok] += 1
+      for i in query_word_count.keys():
+        if i in idf.keys():
+          tf_i = query_word_count[i]
+          idf_i = idf[i]
+          q_norm += (tf_i * idf_i) ** 2
+      q_norm = math.sqrt(q_norm)
+      dot_scores = self.accumulate_dot_scores_bk(query_word_count, index, idf, num_bks)
+      for doc_id in dot_scores.keys():
+        if (q_norm*doc_norms[doc_id]) != 0:
+          doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
+        else:
+          doc_score = 0
+        results.append([doc_score, doc_id])
+      results.sort(key=lambda x: x[0], reverse=True)
+      return results
  
   def index_search(
       self,
@@ -399,10 +484,7 @@ class Authoria:
       q_norm = math.sqrt(q_norm)
       dot_scores,  words = score_func(self, query_word_count, index, idf)
       for doc_id in dot_scores.keys():
-        if (q_norm*doc_norms[doc_id]) != 0:
-          doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
-        else:
-          doc_score = 0
+        doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
         common_words=words[doc_id]
         sort_words=sorted(common_words, key=common_words.get, reverse=True)
         results.append((doc_score, doc_id, sort_words[0:2]))
@@ -413,23 +495,19 @@ class Authoria:
   def book_query(self, query : str, book_list):
     if len(book_list) == 1 : 
       return book_list[0]
-    else: 
-      print(book_list)
+    else:
       bk_descriptions = [self.book_to_descrip[book] for book in
                           book_list]
       flat_msgs_bk = []
       for bk_description in bk_descriptions:
         bk_descript_toks = TreebankWordTokenizer().tokenize(bk_description)
         flat_msgs_bk.append({"toks" : bk_descript_toks})
-      print(flat_msgs_bk)
       inv_idx_bk = self.build_inverted_index(flat_msgs_bk)
-      idf_bk = self.compute_idf(inv_idx_bk, len(flat_msgs_bk), min_df = 0, max_df_ratio=1)
-      inv_idx_bk = {key: val for key, val in inv_idx_bk.items()}
+      idf_bk = self.compute_idf_bk(inv_idx_bk, len(flat_msgs_bk))
       doc_norms_bk = self.compute_doc_norms(inv_idx_bk, idf_bk, len(flat_msgs_bk))
-      ranked_results_bk = self.index_search(query, inv_idx_bk, idf_bk, doc_norms_bk)
-      print(ranked_results_bk)
-      top_title = self.book_index_to_name[ranked_results_bk[0][1]]
-      return top_title #returns only top title
+      ranked_results_bk = self.index_search_bk(query, inv_idx_bk, idf_bk, doc_norms_bk, len(book_list))
+      # top_title = self.book_index_to_name[ranked_results_bk[0][1]]
+      return book_list[ranked_results_bk[0][1]] #returns only top title
 
   def query(self,query_string : str):
     flat_msgs = []
@@ -445,8 +523,8 @@ class Authoria:
     for i in ranked_results: 
       author_name = self.author_index_to_name[i[1]]
       book_lst = self.authors_to_books[author_name]
-      # top_title = self.book_query(query_string, book_lst)
-      top_title = book_lst[0]
+      top_title = self.book_query(query_string, book_lst)
+      # top_title = book_lst[0]
       author_profile = {
             'author': author_name,
             'titles' : self.authors_to_books[author_name],
