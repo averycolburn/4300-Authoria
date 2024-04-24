@@ -31,10 +31,19 @@ class Authoria:
             name: index for index, name in
             enumerate(self.authors_to_genre.keys())
         }
+      
+      """Dictionary of {book: index}"""
+      self.book_name_to_index = {
+            name: index for index, name in
+            enumerate(self.book_to_descrip.keys())
+        }
 
       """Dictionary of {index: author name}"""
       self.author_index_to_name = {
             v: k for k, v in self.author_name_to_index.items()}
+      
+      self.book_index_to_name = {
+            v: k for k, v in self.book_name_to_index.items()}
 
       """List of authors"""
       self.author_names = self.authors_to_genre.keys()
@@ -390,7 +399,10 @@ class Authoria:
       q_norm = math.sqrt(q_norm)
       dot_scores,  words = score_func(self, query_word_count, index, idf)
       for doc_id in dot_scores.keys():
-        doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
+        if (q_norm*doc_norms[doc_id]) != 0:
+          doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
+        else:
+          doc_score = 0
         common_words=words[doc_id]
         sort_words=sorted(common_words, key=common_words.get, reverse=True)
         results.append((doc_score, doc_id, sort_words[0:2]))
@@ -398,8 +410,28 @@ class Authoria:
       results.sort(key=lambda x: x[0], reverse=True)
       return results
 
+  def book_query(self, query : str, book_list):
+    if len(book_list) == 1 : 
+      return book_list[0]
+    else: 
+      print(book_list)
+      bk_descriptions = [self.book_to_descrip[book] for book in
+                          book_list]
+      flat_msgs_bk = []
+      for bk_description in bk_descriptions:
+        bk_descript_toks = TreebankWordTokenizer().tokenize(bk_description)
+        flat_msgs_bk.append({"toks" : bk_descript_toks})
+      print(flat_msgs_bk)
+      inv_idx_bk = self.build_inverted_index(flat_msgs_bk)
+      idf_bk = self.compute_idf(inv_idx_bk, len(flat_msgs_bk), min_df = 0, max_df_ratio=1)
+      inv_idx_bk = {key: val for key, val in inv_idx_bk.items()}
+      doc_norms_bk = self.compute_doc_norms(inv_idx_bk, idf_bk, len(flat_msgs_bk))
+      ranked_results_bk = self.index_search(query, inv_idx_bk, idf_bk, doc_norms_bk)
+      print(ranked_results_bk)
+      top_title = self.book_index_to_name[ranked_results_bk[0][1]]
+      return top_title #returns only top title
+
   def query(self,query_string : str):
-    
     flat_msgs = []
     for description in self.descriptions:
       descript_toks = TreebankWordTokenizer().tokenize(description[0])
@@ -413,6 +445,8 @@ class Authoria:
     for i in ranked_results: 
       author_name = self.author_index_to_name[i[1]]
       book_lst = self.authors_to_books[author_name]
+      # top_title = self.book_query(query_string, book_lst)
+      top_title = book_lst[0]
       author_profile = {
             'author': author_name,
             'titles' : self.authors_to_books[author_name],
@@ -420,11 +454,11 @@ class Authoria:
             'rating': self.authors_to_ratings[author_name],
             'score':round(i[0]*100,2),
             'common': i[2],
-            'feature_title': book_lst[0],
-            'feature_descrip': self.book_to_descrip[book_lst[0]]
+            'feature_title': top_title,
+            'feature_descrip': self.book_to_descrip[top_title]
         }
       rank_list.append(author_profile)
-    return rank_list
+    return rank_list[:1001] #returns first 1000 results
   
   def vectorize_descriptions(self, filepath):
         with open(filepath, 'r', encoding='utf-8') as file:
