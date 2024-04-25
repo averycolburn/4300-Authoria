@@ -111,10 +111,22 @@
     font-family: 'Open Sans', sans-serif;
 }
 
-.button{
+.button-unclicked{
+    margin: 10px;
     background-color: lightgreen;
-    width: 50px;
+    width: 150px;
     border-radius: 3px;
+    outline-style: solid;
+    outline-color: black;
+    outline-width: thin;
 }
   
-.button:hover{background-color:mediumseagreen;}
+.button-clicked{
+    margin: 10px;
+    background-color:mediumseagreen;
+    width: 150px;
+    border-radius: 3px;
+    outline-style: solid;
+    outline-color: black;
+    outline-width: thin;
+}

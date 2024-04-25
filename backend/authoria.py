@@ -506,7 +506,7 @@ class Authoria:
       idf_bk = self.compute_idf_bk(inv_idx_bk, len(flat_msgs_bk))
       doc_norms_bk = self.compute_doc_norms(inv_idx_bk, idf_bk, len(flat_msgs_bk))
       ranked_results_bk = self.index_search_bk(query, inv_idx_bk, idf_bk, doc_norms_bk, len(book_list))
-      # top_title = self.book_index_to_name[ranked_results_bk[0][1]]
+
       return book_list[ranked_results_bk[0][1]] #returns only top title
 
   def query(self,query_string : str):
@@ -519,12 +519,12 @@ class Authoria:
     inv_idx = {key: val for key, val in inv_idx.items() if key in idf} # prune the terms left out by idf
     doc_norms = self.compute_doc_norms(inv_idx, idf, len(flat_msgs))
     ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
+    print(len(ranked_results))
     rank_list = [] 
     for i in ranked_results: 
       author_name = self.author_index_to_name[i[1]]
       book_lst = self.authors_to_books[author_name]
       top_title = self.book_query(query_string, book_lst)
-      # top_title = book_lst[0]
       author_profile = {
             'author': author_name,
             'titles' : self.authors_to_books[author_name],
@@ -536,7 +536,7 @@ class Authoria:
             'feature_descrip': self.book_to_descrip[top_title]
         }
       rank_list.append(author_profile)
-    return rank_list[:1001] #returns first 1000 results
+    return rank_list
   
   def vectorize_descriptions(self, filepath):
         with open(filepath, 'r', encoding='utf-8') as file:

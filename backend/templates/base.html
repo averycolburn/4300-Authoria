@@ -17,9 +17,10 @@
             </div>
             <div class="input-box" onclick="sendFocus()">
                 <img src="{{ url_for('static', filename='images/search.png') }}" />
-                <input type="search" placeholder="Input Author Description" id="text-description"
-                    onsearch="changeLoad();filterText()">
-                <input class="button" onclick="changeLoad();filterText()" type="button" value="Search" id="myButton1"></input>
+                <input type="search" placeholder="Input Author Description" id="text-description" onsearch="handleInputChange()">
+            </div>
+            <div>
+                <input class="button-unclicked" onclick="handleButtonClick()" type="button" value="Search" id="myButton1"></input>
             </div>
         </div>
         <div id="answer-box">
@@ -28,13 +29,43 @@
     </div>
 
     <script>
-
-        function changeLoad() {
-            document.getElementById("myButton1").value="Loading";
+        function handleButtonClick() {
+            var button = document.getElementById('myButton1');
+            button.value = 'Loading...';
+            button.classList.replace("button-unclicked", "button-clicked")
+            filterText();
         }
 
-        function changeLoaded() {
-            document.getElementById("myButton1").value="Loaded";
+        function filterText(event) {
+            document.getElementById("answer-box").innerHTML = "";
+            console.log(document.getElementById("text-description").value);
+            fetch("/query?" + new URLSearchParams({
+                description: document.getElementById("text-description").value
+            }).toString())
+                .then((response) => response.json())
+                .then((data) => {
+                    data.forEach(row => {
+                        let tempDiv = document.createElement("div");
+                        tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
+                            row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip);
+                        document.getElementById("answer-box").appendChild(tempDiv);
+                    });
+                    var button = document.getElementById('myButton1');
+                    button.value = 'Loaded';
+                });
+        }
+
+        function handleInputChange() {
+            var button = document.getElementById('myButton1');
+            var inputText = document.getElementById('text-description').value;
+            if (inputText.trim() !== '') {
+                button.value = 'Loading...';
+                button.classList.replace("button-unclicked", "button-clicked")
+                filterText()
+            } else {
+                button.value = 'Search';
+                button.classList.replace("button-clicked", "button-unclicked")
+            }
         }
 
         function answerBoxTemplate(author, titlelst, genres, rating, score, common, feature_title, feature_descrip) {
@@ -52,31 +83,8 @@
             </div>`
         }
 
-        function loadbutton() {
-            return '<button class="buttonload"> <i class="fa fa-spinner fa-spin"></i>Loading </button>'
-        }
-        function unloadbutton() {
-            return '<button class="button" onclick="filterText()"><i class="fa fa-search"></i></button>' 
-        }
-
         function sendFocus() {
             document.getElementById('text-description').focus()
-        }
-
-        function filterText(event) {
-            document.getElementById("answer-box").innerHTML = ""
-            console.log(document.getElementById("text-description").value)
-            fetch("/query?" + new URLSearchParams({
-                description: document.getElementById("text-description").value
-            }).toString())
-                .then((response) => response.json())
-                .then((data) => data.forEach(row => {
-                    let tempDiv = document.createElement("div")
-                    tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
-                        row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip)
-                    document.getElementById("answer-box").appendChild(tempDiv)
-                .then(changeLoaded())
-                }));
         }
 
     </script>
