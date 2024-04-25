@@ -13,14 +13,13 @@
             <div class="authoria-test">
                 <img src="{{ url_for('static', filename='images/Authoria.png')
                     }}">
+                <h3 class='author-name'>Matching your search to an author you might like</h3>
             </div>
             <div class="input-box" onclick="sendFocus()">
                 <img src="{{ url_for('static', filename='images/search.png') }}" />
                 <input type="search" placeholder="Input Author Description" id="text-description"
-                    onsearch="filterText()">
-                <!-- <button class="buttonload">
-                    <i class="fa fa-spinner fa-spin"></i>Loading
-                </button> -->
+                    onsearch="changeLoad();filterText()">
+                <input class="button" onclick="changeLoad();filterText()" type="button" value="Search" id="myButton1"></input>
             </div>
         </div>
         <div id="answer-box">
@@ -29,6 +28,14 @@
     </div>
 
     <script>
+
+        function changeLoad() {
+            document.getElementById("myButton1").value="Loading";
+        }
+
+        function changeLoaded() {
+            document.getElementById("myButton1").value="Loaded";
+        }
 
         function answerBoxTemplate(author, titlelst, genres, rating, score, common, feature_title, feature_descrip) {
             return `<div class=''>
@@ -43,6 +50,13 @@
                 <p class='author-tags'> Similarity Score: ${score}
                 <p class='author-tags'> Themes in Common with Query: ${common}
             </div>`
+        }
+
+        function loadbutton() {
+            return '<button class="buttonload"> <i class="fa fa-spinner fa-spin"></i>Loading </button>'
+        }
+        function unloadbutton() {
+            return '<button class="button" onclick="filterText()"><i class="fa fa-search"></i></button>' 
         }
 
         function sendFocus() {
@@ -61,6 +75,7 @@
                     tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
                         row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip)
                     document.getElementById("answer-box").appendChild(tempDiv)
+                .then(changeLoaded())
                 }));
         }
 

@@ -110,3 +110,11 @@
     align-items: center;
     font-family: 'Open Sans', sans-serif;
 }
+
+.button{
+    background-color: lightgreen;
+    width: 50px;
+    border-radius: 3px;
+}
+  
+.button:hover{background-color:mediumseagreen;}
