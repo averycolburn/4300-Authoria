@@ -410,39 +410,54 @@ class Authoria:
 
       return book_list[ranked_results_bk[0][1]] #returns only top title
   
-  def query_svd(self, query_str : str, k=5):
+  def find_best_category(self, index : int, scores):
+    score_for_index_author = scores[index]
+    best_category = 0
+    max_score = score_for_index_author[0]
+    for i in range (1,len(score_for_index_author)):
+      if score_for_index_author[i] > max_score:
+        max_score = score_for_index_author[i]
+        best_category = i
+    return best_category
+
+  def query_svd(self, query_str : str, k=30):
     documents = self.documents 
 
     vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7, min_df=75)
     td_matrix = vectorizer.fit_transform(x[1] for x in documents)
 
-    docs_compressed, s, words_compressed = svds(td_matrix, k=40)
+    docs_compressed, s, words_compressed = svds(td_matrix, k=50)
     words_compressed = words_compressed.transpose()
     
-    docs_compressed_normed = normalize(words_compressed, axis=1)
-    
+    word_to_index = vectorizer.vocabulary_
+    index_to_word = {i:t for t,i in word_to_index.items()}
+
+    docs_compressed_normed = normalize(docs_compressed)
+    print(docs_compressed_normed)
+    print(docs_compressed_normed.shape)
+
     query_tfidf = vectorizer.transform([query_str]).toarray()
     query_vec = normalize(np.dot(query_tfidf, words_compressed)).squeeze()
     sims = docs_compressed_normed.dot(query_vec)
-    asort = np.argsort(-sims)[:k+1]
+    asort = np.argsort(-sims)[:k+1] #returns top 30 books
     ranked_results = [(i, documents[i][0],sims[i]) for i in asort[1:]]
-    print(ranked_results[:11])
-
     rank_list = [] 
     for i in ranked_results: 
       author_index = i[0]
-      author_name = self.author_index_to_name[author_index]
-      # author_name = i[0]
+      author_name = i[1]
       book_lst = self.authors_to_books[author_name]
       top_title = self.book_query(query_str, book_lst)
-      common_themes = ""
+      #best dimension select
+      best_dim = self.find_best_category(author_index, docs_compressed_normed)
+      dimension_col = words_compressed[:,best_dim].squeeze()
+      asort_dim = np.argsort(-dimension_col)
       author_profile = {
             'author': author_name,
             'titles' : self.authors_to_books[author_name],
             'genres': self.authors_to_genre[author_name],
             'rating': self.authors_to_ratings[author_name],
             'score': round(i[2]*100, 2), # round to score out of 100 (more intuitive)
-            'common': common_themes,
+            'common': [index_to_word[best_dim] for best_dim in asort_dim[:6]],
             'feature_title': top_title,
             'feature_descrip': self.book_to_descrip[top_title]
         }
