@@ -457,7 +457,7 @@ class Authoria:
             'genres': self.authors_to_genre[author_name],
             'rating': self.authors_to_ratings[author_name],
             'score': round(i[2]*100, 2), # round to score out of 100 (more intuitive)
-            'common': [index_to_word[best_dim] for best_dim in asort_dim[:6]],
+            'common':  [" "+index_to_word[best_dim] for best_dim in asort_dim[:6]], 
             'feature_title': top_title,
             'feature_descrip': self.book_to_descrip[top_title]
         }
