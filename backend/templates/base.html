@@ -23,6 +23,7 @@
                 <input class="button-unclicked" onclick="handleButtonClick()" type="button" value="Search" id="myButton1"></input>
             </div>
         </div>
+        <div id="filter"></div>
         <div id="answer-box">
 
         </div>
@@ -36,23 +37,68 @@
             filterText();
         }
 
+        // function changeSort(selectObject) {
+        //     let value = selectObject.value;
+        //     document.getElementById("responses").innerHTML = ''
+        //     if (value == "popularity") renderResultsByPop()
+        //     else renderResultsByRel()
+        // }
+
         function filterText(event) {
+            //filter inspired by drinkgpt from last semester
+            // document.getElementById("filter").innerHTML = `
+            //     <label for="filter">Sort by:</label>
+
+            //     <select name="filter" class="filter-button" id="filter" onChange="changeSort(this)">
+            //         <option value="relevance">Relevance</option>
+            //         <option value="popularity">Popularity</option>
+            //     </select>`
             document.getElementById("answer-box").innerHTML = "";
             console.log(document.getElementById("text-description").value);
-            fetch("/query?" + new URLSearchParams({
-                description: document.getElementById("text-description").value
-            }).toString())
-                .then((response) => response.json())
-                .then((data) => {
-                    data.forEach(row => {
-                        let tempDiv = document.createElement("div");
-                        tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
-                            row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip);
-                        document.getElementById("answer-box").appendChild(tempDiv);
+            fetch("/query_rel?" + new URLSearchParams({
+                    description: document.getElementById("text-description").value
+                }).toString())
+                    .then((response) => response.json())
+                    .then((data) => {
+                        data.forEach(row => {
+                            let tempDiv = document.createElement("div");
+                            tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
+                                row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip);
+                            document.getElementById("answer-box").appendChild(tempDiv);
+                        });
+                        var button = document.getElementById('myButton1');
+                        button.value = 'Loaded';
                     });
-                    var button = document.getElementById('myButton1');
-                    button.value = 'Loaded';
-                });
+            // if (document.getElementById("filter").value = "popularity") {
+            //     fetch("/query_pop?" + new URLSearchParams({
+            //         description: document.getElementById("text-description").value
+            //     }).toString())
+            //         .then((response) => response.json())
+            //         .then((data) => {
+            //             data.forEach(row => {
+            //                 let tempDiv = document.createElement("div");
+            //                 tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
+            //                     row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip);
+            //                 document.getElementById("answer-box").appendChild(tempDiv);
+            //             });
+            //             var button = document.getElementById('myButton1');
+            //             button.value = 'Loaded';
+            //         });
+            // } else 
+            //     fetch("/query_rel?" + new URLSearchParams({
+            //         description: document.getElementById("text-description").value
+            //     }).toString())
+            //         .then((response) => response.json())
+            //         .then((data) => {
+            //             data.forEach(row => {
+            //                 let tempDiv = document.createElement("div");
+            //                 tempDiv.innerHTML = answerBoxTemplate(row.author, row.titles,
+            //                     row.genres, row.rating, row.score, row.common, row.feature_title, row.feature_descrip);
+            //                 document.getElementById("answer-box").appendChild(tempDiv);
+            //             });
+            //             var button = document.getElementById('myButton1');
+            //             button.value = 'Loaded';
+            //         });
         }
 
         function handleInputChange() {

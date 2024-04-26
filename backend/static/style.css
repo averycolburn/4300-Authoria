@@ -113,20 +113,22 @@
 
 .button-unclicked{
     margin: 10px;
-    background-color: lightgreen;
+    background-color: lightskyblue;
     width: 150px;
     border-radius: 3px;
     outline-style: solid;
-    outline-color: black;
+    outline-color: darkgrey;
     outline-width: thin;
+    font-family: 'Open Sans', sans-serif;
 }
   
 .button-clicked{
     margin: 10px;
-    background-color:mediumseagreen;
+    background-color:skyblue;
     width: 150px;
     border-radius: 3px;
     outline-style: solid;
-    outline-color: black;
+    outline-color: darkgrey;
     outline-width: thin;
+    font-family: 'Open Sans', sans-serif;
 }

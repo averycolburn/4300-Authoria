@@ -49,14 +49,35 @@ def set_default(obj):
     raise TypeError
 
 
-@app.route("/query")
+@app.route("/query_rel")
 def episodes_search():
     text = request.args.get("description")
     # return sql_search(text)
 
     # max_pop = -1
     # max_i = 0
-    res = authoria.query(text)
+    res = authoria.query_svd(text)
+    # for i in range(len(res)):
+    #     if res[i]['rating'] > max_pop:
+    #         max_pop = res[i]['rating']
+    #         max_i = i
+
+    # for i in range(len(res)):
+    #     if i == max_i:
+    #         res[i] = dict(res[i])
+    #     else:
+    #         res[i] = dict(res[i])
+    j = json.dumps(res, default = set_default)
+    return j
+
+@app.route("/query_pop")
+def episodes_search_pop():
+    text = request.args.get("description")
+    # return sql_search(text)
+
+    # max_pop = -1
+    # max_i = 0
+    res = authoria.query_svd(text, True)
     # for i in range(len(res)):
     #     if res[i]['rating'] > max_pop:
     #         max_pop = res[i]['rating']

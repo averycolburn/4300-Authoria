@@ -3,8 +3,10 @@ from typing import List, Tuple, Dict
 import math
 from nltk.tokenize import TreebankWordTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-# from scipy.sparse.linalg import svds
+from scipy.sparse.linalg import svds
 from collections import defaultdict 
+from sklearn.preprocessing import normalize
+import numpy as np
 
 class Authoria:
   def __init__(self):
@@ -51,13 +53,13 @@ class Authoria:
       """List of descriptions"""
       self.descriptions = [self.authors_to_descriptions[author] for author in
                         self.authors_to_descriptions]
-      
+
+      """List of descriptions"""
+      self.documents = [(author, self.authors_to_descriptions[author][0]) for author in
+                        self.authors_to_descriptions]
+
       """Set of common words"""
       self.common = self.read_common_words('data/unigram_freq.csv',100) #pick number of common words to exclude here
-
-      """Set of closest words using SVD"""
-      self.vectorizer, self.td_matrix = self.vectorize_descriptions('data/seven_k_books.csv')
-      
 
 
   def read_common_words(self, filepath, n):
@@ -235,17 +237,6 @@ class Authoria:
       return inverted_dict
 
   def compute_idf_bk(self, inv_idx, n_docs):
-
-      idf_trimmed = dict()
-      for term in inv_idx.keys():
-        term = term.lower()
-        df_t = len(inv_idx[term])
-        idf_t = n_docs/ df_t
-        idf_trimmed[term] = idf_t
-
-      return idf_trimmed
-
-  def compute_idf(self, inv_idx, n_docs, min_df=5, max_df_ratio=0.9):
       """Compute term IDF values from the inverted index.
       Words that are too frequent or too infrequent get pruned.
 
@@ -275,9 +266,8 @@ class Authoria:
       for term in inv_idx.keys():
         term = term.lower()
         df_t = len(inv_idx[term])
-        if df_t >= min_df and (df_t/n_docs) <= max_df_ratio:
-          idf_t = math.log2(n_docs/ (1+ df_t) )
-          idf_trimmed[term] = idf_t
+        idf_t = n_docs/ df_t
+        idf_trimmed[term] = idf_t
 
       return idf_trimmed
 
@@ -309,19 +299,6 @@ class Authoria:
       return (norms)
 
   def accumulate_dot_scores_bk(self, query_word_counts: dict, index: dict, idf: dict, num_of_docs : int) -> dict:
-      doc_scores = dict.fromkeys(range(num_of_docs), 0) #all books have 0 score
-      for query_word in query_word_counts.keys():
-        if query_word in idf.keys():
-          q_tf = query_word_counts[query_word]
-          q_j = q_tf* idf[query_word]
-          for doc_tuple in index[query_word]:
-            doc = doc_tuple[0]
-            d_tf = doc_tuple[1]
-            d_ij = d_tf * idf[query_word]
-            doc_scores[doc] += d_ij* q_j
-      return doc_scores
-
-  def accumulate_dot_scores(self, query_word_counts: dict, index: dict, idf: dict) -> dict:
       """Perform a term-at-a-time iteration to efficiently compute the numerator term of cosine similarity across multiple documents.
 
       Arguments
@@ -340,9 +317,7 @@ class Authoria:
       doc_scores: dict
           Dictionary mapping from doc ID to the final accumulated score for that doc
       """
-      k = 1/1000 #k is weight for impact of author popularity
-      doc_scores = dict()
-      word_scores=defaultdict(dict)
+      doc_scores = dict.fromkeys(range(num_of_docs), 0) #all books have 0 score
       for query_word in query_word_counts.keys():
         if query_word in idf.keys():
           q_tf = query_word_counts[query_word]
@@ -351,16 +326,8 @@ class Authoria:
             doc = doc_tuple[0]
             d_tf = doc_tuple[1]
             d_ij = d_tf * idf[query_word]
-            if doc not in doc_scores.keys():
-              doc_scores[doc] = 0
-            if(query_word in word_scores[doc]):
-               word_scores[doc][query_word]+=d_ij*q_j
-            else:
-               word_scores[doc][query_word]=d_ij*q_j
-            # word_scores[doc][query_word]+= d_ij*q_j
-            doc_scores[doc] += d_ij* q_j+ self.authors_to_weighted_ratings[self.author_index_to_name[doc]]*k #sofia 3/21
-
-      return doc_scores, word_scores
+            doc_scores[doc] += d_ij* q_j
+      return doc_scores
 
   def index_search_bk(
       self,
@@ -424,74 +391,8 @@ class Authoria:
           doc_score = 0
         results.append([doc_score, doc_id])
       results.sort(key=lambda x: x[0], reverse=True)
-      return results
- 
-  def index_search(
-      self,
-      query: str,
-      index: dict,
-      idf,
-      doc_norms,
-      score_func=accumulate_dot_scores,
-      tokenizer=TreebankWordTokenizer(),
-  ) -> List[Tuple[int, int]]:
-      """Search the collection of documents for the given query
-
-      Arguments
-      =========
-
-      query: string,
-          The query we are looking for.
-
-      index: an inverted index as above
-
-      idf: idf values precomputed as above
-
-      doc_norms: document norms as computed above
-
-      score_func: function,
-          A function that computes the numerator term of cosine similarity (the dot product) for all documents.
-          Takes as input a dictionary of query word counts, the inverted index, and precomputed idf values.
-          (See Q7)
-
-      tokenizer: a TreebankWordTokenizer
-
-      Returns
-      =======
-
-      results, list of tuples (score, doc_id)
-          Sorted list of results such that the first element has
-          the highest score, and `doc_id` points to the document
-          with the highest score.
-      """
-      results = []
-      # dot_scores, words=score_func(self, query_word_count, index, idf)
-      # highest_contributors=defaultdict(int)
-      query_toks = tokenizer.tokenize(query.lower())
-      query_word_count = dict()
-      q_norm = 0
-      for tok in query_toks:
-        if not (tok in self.common): #sofia 4/14
-          if tok not in query_word_count.keys():
-            query_word_count[tok] = 0
-          query_word_count[tok] += 1
-      for i in query_word_count.keys():
-        if i in idf.keys():
-          tf_i = query_word_count[i]
-          idf_i = idf[i]
-          q_norm += (tf_i * idf_i) ** 2
-          # highest_contributors[i]+= (tf_i * idf_i) ** 2
-      q_norm = math.sqrt(q_norm)
-      dot_scores,  words = score_func(self, query_word_count, index, idf)
-      for doc_id in dot_scores.keys():
-        doc_score = dot_scores[doc_id]/(q_norm*doc_norms[doc_id])
-        common_words=words[doc_id]
-        sort_words=sorted(common_words, key=common_words.get, reverse=True)
-        results.append((doc_score, doc_id, sort_words[0:2]))
-      # highest_contributors.sort(key=lambda x: x[1], reverse=True)
-      results.sort(key=lambda x: x[0], reverse=True)
-      return results
-
+      return results    
+  
   def book_query(self, query : str, book_list):
     if len(book_list) == 1 : 
       return book_list[0]
@@ -508,58 +409,45 @@ class Authoria:
       ranked_results_bk = self.index_search_bk(query, inv_idx_bk, idf_bk, doc_norms_bk, len(book_list))
 
       return book_list[ranked_results_bk[0][1]] #returns only top title
+  
+  def query_svd(self, query_str : str, k=5):
+    documents = self.documents 
 
-  def query(self,query_string : str):
-    flat_msgs = []
-    for description in self.descriptions:
-      descript_toks = TreebankWordTokenizer().tokenize(description[0])
-      flat_msgs.append({"toks" : descript_toks})
-    inv_idx = self.build_inverted_index(flat_msgs)
-    idf = self.compute_idf(inv_idx, len(flat_msgs), min_df = 5)
-    inv_idx = {key: val for key, val in inv_idx.items() if key in idf} # prune the terms left out by idf
-    doc_norms = self.compute_doc_norms(inv_idx, idf, len(flat_msgs))
-    ranked_results = self.index_search(query_string, inv_idx, idf, doc_norms)
-    print(len(ranked_results))
+    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7, min_df=75)
+    td_matrix = vectorizer.fit_transform(x[1] for x in documents)
+
+    docs_compressed, s, words_compressed = svds(td_matrix, k=40)
+    words_compressed = words_compressed.transpose()
+    
+    docs_compressed_normed = normalize(words_compressed, axis=1)
+    
+    query_tfidf = vectorizer.transform([query_str]).toarray()
+    query_vec = normalize(np.dot(query_tfidf, words_compressed)).squeeze()
+    sims = docs_compressed_normed.dot(query_vec)
+    asort = np.argsort(-sims)[:k+1]
+    ranked_results = [(i, documents[i][0],sims[i]) for i in asort[1:]]
+    print(ranked_results[:11])
+
     rank_list = [] 
     for i in ranked_results: 
-      author_name = self.author_index_to_name[i[1]]
+      author_index = i[0]
+      author_name = self.author_index_to_name[author_index]
+      # author_name = i[0]
       book_lst = self.authors_to_books[author_name]
-      top_title = self.book_query(query_string, book_lst)
+      top_title = self.book_query(query_str, book_lst)
+      common_themes = ""
       author_profile = {
             'author': author_name,
             'titles' : self.authors_to_books[author_name],
             'genres': self.authors_to_genre[author_name],
             'rating': self.authors_to_ratings[author_name],
-            'score':round(i[0]*100,2),
-            'common': i[2],
+            'score': round(i[2]*100, 2), # round to score out of 100 (more intuitive)
+            'common': common_themes,
             'feature_title': top_title,
             'feature_descrip': self.book_to_descrip[top_title]
         }
       rank_list.append(author_profile)
     return rank_list
-  
-  def vectorize_descriptions(self, filepath):
-        with open(filepath, 'r', encoding='utf-8') as file:
-            csv_reader = csv.DictReader(file)
-            descriptions = [row['description'] for row in csv_reader]
-
-        vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7, min_df=75)
-        td_matrix = vectorizer.fit_transform(descriptions)
-        return vectorizer, td_matrix
-
-def closest_words(self, word_in, k=10):
-    word_to_index = self.vectorizer.vocabulary_
-    index_to_word = {i: t for t, i in word_to_index.items()}
-
-    if word_in not in word_to_index:
-      return "Not in vocab."
-
-    word_index = word_to_index[word_in]
-    sims = self.td_matrix.dot(self.td_matrix[word_index, :].T).toarray().ravel()
-    asort = sorted(range(len(sims)),key=lambda i: (-sims)[i])[:k + 1]
-    return [(index_to_word[i], sims[i]) for i in asort[1:]]
-
-
 
   
 if __name__ == "__main__":
