@@ -423,10 +423,10 @@ class Authoria:
   def query_svd(self, query_str : str, k=30):
     documents = self.documents 
 
-    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7, min_df=75)
+    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.5, min_df=15)
     td_matrix = vectorizer.fit_transform(x[1] for x in documents)
 
-    docs_compressed, s, words_compressed = svds(td_matrix, k=50)
+    docs_compressed, s, words_compressed = svds(td_matrix, k=30)
     words_compressed = words_compressed.transpose()
     
     word_to_index = vectorizer.vocabulary_
