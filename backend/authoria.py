@@ -421,6 +421,7 @@ class Authoria:
     return best_category
 
   def query_svd(self, query_str : str, k=30):
+    w = 1/1000 
     documents = self.documents 
 
     vectorizer = TfidfVectorizer(stop_words='english', max_df=0.5, min_df=15)
@@ -456,12 +457,15 @@ class Authoria:
             'titles' : self.authors_to_books[author_name],
             'genres': self.authors_to_genre[author_name],
             'rating': self.authors_to_ratings[author_name],
+            'weighted_rating': i[2]*100 + w*self.authors_to_weighted_ratings[author_name],
             'score': round(i[2]*100, 2), # round to score out of 100 (more intuitive)
             'common':  [" "+index_to_word[best_dim] for best_dim in asort_dim[:6]], 
             'feature_title': top_title,
             'feature_descrip': self.book_to_descrip[top_title]
         }
+
       rank_list.append(author_profile)
+    rank_list.sort(key=lambda x: x['weighted_rating'], reverse=True)
     return rank_list
 
   
